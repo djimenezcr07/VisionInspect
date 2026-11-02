@@ -1,0 +1,18 @@
+name: Compilar y probar
+on: [push, pull_request]
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update && sudo apt-get install -y libopencv-dev cmake ninja-build
+      - run: python -m pip install -r requirements.txt pybind11
+      - run: python scripts/generate_samples.py
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -Dpybind11_DIR="$(python -m pybind11 --cmakedir)"
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+      - run: PYTHONPATH=build python -c "import vision_engine; print(vision_engine.__version__)"
+      - run: python -m pytest -q
